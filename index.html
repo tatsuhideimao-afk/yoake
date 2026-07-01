@@ -9,7 +9,7 @@
      ヨアケ (Yoake) — 掲示板＋申請制の匿名1対1チャット
      ・毎日の日の出で全部終了（端末内で日の出を計算／基準=東京）
      ・削除時刻を常に最上部に表示
-     ・検索: 性別 / 年齢レイヤー / 地域 でセグメント
+     ・検索: 年齢レイヤー / 地域 でセグメント
      =========================================================== */
   :root{
     --bg:#0B0E1A; --bg-2:#0E1224;
@@ -142,8 +142,15 @@
     border:1px solid var(--line);border-radius:14px;padding:12px 13px;
   }
   .card.req{background:linear-gradient(135deg, rgba(255,138,91,.08), var(--surface));border-color:rgba(255,193,94,.25)}
-  .avatar{width:42px;height:42px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-size:20px;
+  .avatar{width:42px;height:42px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;font-size:20px;overflow:hidden;
     background:linear-gradient(135deg,var(--surface-2),#2c356a);border:1px solid var(--line)}
+  .avatar svg{width:100%;height:100%;display:block}
+  .av-img{width:100%;height:100%;background-image:url(./avatars.png);background-size:400% 400%;background-repeat:no-repeat}
+  .avatar-picker{display:grid;grid-template-columns:repeat(auto-fill,minmax(46px,1fr));gap:8px;margin-top:2px}
+  .avatar-picker button{aspect-ratio:1/1;border-radius:50%;overflow:hidden;border:2px solid transparent;background:transparent;padding:0;cursor:pointer;transition:transform .12s,border-color .12s}
+  .avatar-picker button svg{width:100%;height:100%;display:block}
+  .avatar-picker button.on{border-color:var(--me-1);box-shadow:0 0 0 2px rgba(110,123,255,.35)}
+  .avatar-picker button:active{transform:scale(.92)}
   .card .info{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:6px}
   .card .info .nm{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .card .cta{flex:0 0 auto;display:flex;flex-wrap:wrap;gap:7px;justify-content:flex-end}
@@ -228,6 +235,9 @@
   #gate,#gateBlock{padding:34px 26px;justify-content:center;gap:16px}
   #gate h1,#gateBlock h2{margin:0;font-size:24px}
   #gate p,#gateBlock p{margin:0;color:var(--muted);font-size:14.5px;line-height:1.75}
+  .gate-legal{margin:2px 0 0;color:var(--faint);font-size:12px;line-height:1.7;text-align:center}
+  .gate-legal a{color:var(--me-1);text-decoration:none}
+  .gate-legal a:hover{text-decoration:underline}
   #gate .btn{width:100%;font-size:16px;padding:16px}
   #gate .btn.ghost{font-size:14px;padding:13px}
 
@@ -258,6 +268,7 @@
     <p>このサービスは18歳以上の方のみ利用できます。知らない相手と1対1で話す場所のため、年齢の確認にご協力ください。</p>
     <button class="btn" id="gateYes">はい・18歳以上です</button>
     <button class="btn ghost" id="gateNo">いいえ（18歳未満）</button>
+    <p class="gate-legal">「はい」を押すと <a href="./terms.html" target="_blank" rel="noopener">利用規約</a>・<a href="./privacy.html" target="_blank" rel="noopener">プライバシーポリシー</a> に同意したものとみなします。</p>
     <div class="safety">
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 2 4 5v6c0 5 3.4 8.3 8 11 4.6-2.7 8-6 8-11V5l-8-3Z" stroke="#8B92B0" stroke-width="1.6" stroke-linejoin="round"/></svg>
       <span>本名・電話番号・メールは不要。不快な相手は通報／ブロックでいつでも離れられます。</span>
@@ -282,11 +293,6 @@
     </div>
 
     <div class="field">
-      <label>性別</label>
-      <div class="seg" id="genderSeg"></div>
-    </div>
-
-    <div class="field">
       <label for="ageSel">年齢（レイヤー）</label>
       <select id="ageSel" class="sel"></select>
     </div>
@@ -294,6 +300,11 @@
     <div class="field">
       <label for="regionSel">地域</label>
       <select id="regionSel" class="sel"></select>
+    </div>
+
+    <div class="field">
+      <label>アイコン</label>
+      <div class="avatar-picker" id="avatarPicker"></div>
     </div>
 
     <div class="safety">
@@ -325,7 +336,6 @@
     </div>
 
     <div class="filters">
-      <div class="fcol"><label>性別</label><select id="fGender" class="sel"></select></div>
       <div class="fcol"><label>年齢</label><select id="fAge" class="sel"></select></div>
       <div class="fcol"><label>地域</label><select id="fRegion" class="sel"></select></div>
     </div>
@@ -336,7 +346,7 @@
   <!-- チャット -->
   <section id="chat" class="screen">
     <div class="chat-head">
-      <div class="avatar">🌙</div>
+      <div class="avatar" id="partnerAvatar">🌙</div>
       <div class="who">
         <div class="nm" id="partnerName">あいて</div>
         <div class="st" id="partnerStatus"><span class="live"></span><span id="partnerStatusText">接続済み</span></div>
@@ -395,10 +405,12 @@
    =========================================================== */
 
 /* 選択肢 */
-const GENDERS = ["男性","女性","その他"];
 const AGES    = ["18-19","20代","30代","40代","50代","60代〜"];
 const REGIONS = ["北海道","東北","関東","中部","近畿","中国","四国","九州・沖縄"];
-const AVATAR = "🌙";
+const AVATAR_IDS=["m1","m2","m3","m4","m5","m6","m7","m8","f1","f2","f3","f4","f5","f6","f7","f8"];
+let selectedAvatar="m1";
+const AVATAR_POS={"m1":"0% 0%","m2":"33.3333% 0%","m3":"66.6667% 0%","m4":"100% 0%","m5":"0% 33.3333%","m6":"33.3333% 33.3333%","m7":"66.6667% 33.3333%","m8":"100% 33.3333%","f1":"0% 66.6667%","f2":"33.3333% 66.6667%","f3":"66.6667% 66.6667%","f4":"100% 66.6667%","f5":"0% 100%","f6":"33.3333% 100%","f7":"66.6667% 100%","f8":"100% 100%"};
+function avatarHTML(id){ return '<div class="av-img" style="background-position:'+(AVATAR_POS[id]||"0% 0%")+'"></div>'; }
 
 /* 日の出の基準地点（東京）。全ユーザー共通の“夜明け”にするための固定座標。 */
 const LAT = 35.6895, LNG = 139.6917;
@@ -496,18 +508,18 @@ function computeCycle(){
 /* セレクト/チップを先に組み立て（設定前でも見えるように） */
 $("nickname").placeholder="例: "+genName();
 (function buildStaticUI(){
-  // gender segmented
-  const seg=$("genderSeg");
-  GENDERS.forEach(g=>{ const b=document.createElement("button"); b.type="button"; b.textContent=g; b.dataset.v=g; seg.appendChild(b); });
   // profile selects
   const fill=(sel,arr,ph)=>{ const o=document.createElement("option"); o.value=""; o.textContent=ph; o.disabled=true; o.selected=true; sel.appendChild(o); arr.forEach(v=>{const op=document.createElement("option");op.value=v;op.textContent=v;sel.appendChild(op);}); };
   fill($("ageSel"),AGES,"選択してください");
   fill($("regionSel"),REGIONS,"選択してください");
   // filters (すべて + options)
   const fillFilter=(sel,arr)=>{ const o=document.createElement("option");o.value="すべて";o.textContent="すべて";sel.appendChild(o); arr.forEach(v=>{const op=document.createElement("option");op.value=v;op.textContent=v;sel.appendChild(op);}); };
-  fillFilter($("fGender"),GENDERS);
   fillFilter($("fAge"),AGES);
   fillFilter($("fRegion"),REGIONS);
+  // avatar picker
+  const ap=$("avatarPicker");
+  AVATAR_IDS.forEach((id,i)=>{ const b=document.createElement("button"); b.type="button"; b.dataset.v=id; b.innerHTML=avatarHTML(id); if(i===0)b.classList.add("on"); ap.appendChild(b); });
+  ap.addEventListener("click",(e)=>{ const btn=e.target.closest("button"); if(!btn)return; ap.querySelectorAll("button").forEach(b=>b.classList.remove("on")); btn.classList.add("on"); selectedAvatar=btn.dataset.v; });
 })();
 
 /* 設定ファイル(firebase-config.js)を読み込む。無い/未設定なら設定画面 */
@@ -533,7 +545,7 @@ else { setScreen("gate"); }
    =========================================================== */
 async function boot(){
   const { initializeApp }=await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-app.js");
-  const { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, inMemoryPersistence }=
+  const { getAuth, signInAnonymously, onAuthStateChanged, setPersistence, browserLocalPersistence }=
     await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-auth.js");
   const DB=await import("https://www.gstatic.com/firebasejs/12.15.0/firebase-database.js");
   const { getDatabase, ref, set, get, update, remove, push, onValue, onChildAdded, onDisconnect, runTransaction, serverTimestamp }=DB;
@@ -544,8 +556,7 @@ async function boot(){
 
   /* 状態 */
   let myUid=null;
-  let profile={ name:genName(), gender:"", ageLayer:"", region:"" };
-  let selectedGender="";
+  let profile={ name:genName(), ageLayer:"", region:"" };
   let state="profile"; // profile | board | chat | dawn
 
   let cycle=null, dayPath="";
@@ -564,23 +575,23 @@ async function boot(){
   const outgoing=new Map();
   /* 掲示板/申請の最新スナップショット */
   let boardData={}, incomingData={};
-  /* ブロック（このセッション内）: 相手uidの集合。DBにも両方向で記録する */
+  /* ブロック（端末固定IDで夜をまたいで永続。root /blocklist に両方向で記録） */
   const blocked=new Set();
   let blocksUnsub=null;
 
-  /* ---------------- 認証（メモリ内＝タブごとに別人／更新で消える） ---------------- */
-  try{ await setPersistence(auth,inMemoryPersistence); }catch(e){}
+  /* ---------------- 認証（端末（ブラウザ）に固定＝更新しても同じID。ブロックが効く） ---------------- */
+  try{ await setPersistence(auth,browserLocalPersistence); }catch(e){}
 
+  let authed=false;
   onAuthStateChanged(auth, async (user)=>{
-    if(!user) return;
-    myUid=user.uid;
-    initCycle(true);
-    setScreen("profile");
-  });
-  signInAnonymously(auth).catch((err)=>{
-    setScreen("profile");
-    toast("ログインに失敗しました。匿名ログインがONか確認してね。");
-    console.error(err);
+    if(user){
+      myUid=user.uid;
+      if(!authed){ authed=true; initCycle(true); setScreen("profile"); }
+    }else{
+      // この端末で初めて → 匿名IDを作成（以後はこのIDが固定される）
+      try{ await signInAnonymously(auth); }
+      catch(err){ setScreen("profile"); toast("ログインに失敗しました。匿名ログインがONか確認してね。"); console.error(err); }
+    }
   });
 
   /* ---------------- サイクル（夜明け）管理 ---------------- */
@@ -648,24 +659,18 @@ async function boot(){
   });
 
   /* ---------------- プロフィール ---------------- */
-  $("genderSeg").querySelectorAll("button").forEach(btn=>{
-    btn.addEventListener("click",()=>{
-      $("genderSeg").querySelectorAll("button").forEach(b=>b.classList.remove("on"));
-      btn.classList.add("on"); selectedGender=btn.dataset.v; validateProfile();
-    });
-  });
   $("ageSel").addEventListener("change",validateProfile);
   $("regionSel").addEventListener("change",validateProfile);
   function validateProfile(){
-    const ok=selectedGender && $("ageSel").value && $("regionSel").value;
+    const ok=$("ageSel").value && $("regionSel").value;
     $("enterBoardBtn").disabled=!ok;
   }
   $("enterBoardBtn").addEventListener("click",()=>{
     profile={
       name:maskNG(($("nickname").value||"").trim().slice(0,16))||genName(),
-      gender:selectedGender,
       ageLayer:$("ageSel").value,
-      region:$("regionSel").value
+      region:$("regionSel").value,
+      avatar:selectedAvatar
     };
     enterBoard();
   });
@@ -676,31 +681,30 @@ async function boot(){
     state="board";
     // 自分の掲示（status open）を出す
     const myBoardRef=ref(db,`${dayPath}/board/${myUid}`);
-    await set(myBoardRef,{ name:profile.name, gender:profile.gender, ageLayer:profile.ageLayer, region:profile.region, status:"open", ts:serverTimestamp() }).catch(()=>{});
+    await set(myBoardRef,{ name:profile.name, avatar:profile.avatar, ageLayer:profile.ageLayer, region:profile.region, status:"open", ts:serverTimestamp() }).catch(()=>{});
     onDisconnect(myBoardRef).remove();
 
     // 自分の表示
     $("meName").textContent=profile.name;
     const mc=$("meChips"); clearChildren(mc);
-    [profile.gender,profile.ageLayer,profile.region].forEach(t=>{ const c=document.createElement("span"); c.className="chip"; c.textContent=t; mc.appendChild(c); });
+    [profile.ageLayer,profile.region].forEach(t=>{ const c=document.createElement("span"); c.className="chip"; c.textContent=t; mc.appendChild(c); });
 
     // 掲示板・申請・ブロックの購読
     if(blocksUnsub){ blocksUnsub(); blocksUnsub=null; }
-    blocksUnsub=onValue(ref(db,`${dayPath}/blocks/${myUid}`),(s)=>{ const v=s.val()||{}; blocked.clear(); Object.keys(v).forEach(u=>blocked.add(u)); renderBoard(); renderRequests(); });
+    blocksUnsub=onValue(ref(db,`blocklist/${myUid}`),(s)=>{ const v=s.val()||{}; blocked.clear(); Object.keys(v).forEach(u=>blocked.add(u)); renderBoard(); renderRequests(); });
     boardUnsub=onValue(ref(db,`${dayPath}/board`),(s)=>{ boardData=s.val()||{}; renderBoard(); });
     reqUnsub=onValue(ref(db,`${dayPath}/requests/${myUid}`),(s)=>{ incomingData=s.val()||{}; renderRequests(); });
 
     setScreen("board");
   }
 
-  ["fGender","fAge","fRegion"].forEach(id=>$(id).addEventListener("change",renderBoard));
+  ["fAge","fRegion"].forEach(id=>$(id).addEventListener("change",renderBoard));
 
   function renderBoard(){
-    const fG=$("fGender").value, fA=$("fAge").value, fR=$("fRegion").value;
+    const fA=$("fAge").value, fR=$("fRegion").value;
     const rows=Object.entries(boardData)
       .filter(([uid,p])=>uid!==myUid && p && p.status==="open")
       .filter(([uid])=>!blocked.has(uid))
-      .filter(([,p])=>fG==="すべて"||p.gender===fG)
       .filter(([,p])=>fA==="すべて"||p.ageLayer===fA)
       .filter(([,p])=>fR==="すべて"||p.region===fR)
       .sort((a,b)=>(b[1].ts||0)-(a[1].ts||0));
@@ -716,11 +720,11 @@ async function boot(){
     }
     rows.forEach(([uid,p])=>{
       const card=document.createElement("div"); card.className="card";
-      const av=document.createElement("div"); av.className="avatar"; av.textContent=AVATAR;
+      const av=document.createElement("div"); av.className="avatar"; av.innerHTML=avatarHTML(p.avatar);
       const info=document.createElement("div"); info.className="info";
       const nm=document.createElement("div"); nm.className="nm"; nm.textContent=p.name||"だれか";
       const chips=document.createElement("div"); chips.className="chips";
-      [p.gender,p.ageLayer,p.region].forEach(t=>{ const c=document.createElement("span"); c.className="chip"; c.textContent=t; chips.appendChild(c); });
+      [p.ageLayer,p.region].forEach(t=>{ const c=document.createElement("span"); c.className="chip"; c.textContent=t; chips.appendChild(c); });
       info.appendChild(nm); info.appendChild(chips);
       const cta=document.createElement("div"); cta.className="cta";
       if(outgoing.has(uid)){
@@ -748,11 +752,11 @@ async function boot(){
     entries.sort((a,b)=>(a[1].ts||0)-(b[1].ts||0));
     entries.forEach(([fromUid,p])=>{
       const card=document.createElement("div"); card.className="card req";
-      const av=document.createElement("div"); av.className="avatar"; av.textContent=AVATAR;
+      const av=document.createElement("div"); av.className="avatar"; av.innerHTML=avatarHTML(p.avatar);
       const info=document.createElement("div"); info.className="info";
       const nm=document.createElement("div"); nm.className="nm"; nm.textContent=p.name||"だれか";
       const chips=document.createElement("div"); chips.className="chips";
-      [p.gender,p.ageLayer,p.region].forEach(t=>{ if(t){const c=document.createElement("span");c.className="chip";c.textContent=t;chips.appendChild(c);} });
+      [p.ageLayer,p.region].forEach(t=>{ if(t){const c=document.createElement("span");c.className="chip";c.textContent=t;chips.appendChild(c);} });
       info.appendChild(nm); info.appendChild(chips);
       const cta=document.createElement("div"); cta.className="cta";
       const ok=document.createElement("button"); ok.className="btn"; ok.textContent="承認"; ok.addEventListener("click",()=>approve(fromUid,p));
@@ -768,7 +772,7 @@ async function boot(){
   function sendRequest(targetUid){
     if(outgoing.has(targetUid)) return;
     const reqRef=ref(db,`${dayPath}/requests/${targetUid}/${myUid}`);
-    set(reqRef,{ name:profile.name, gender:profile.gender, ageLayer:profile.ageLayer, region:profile.region, ts:serverTimestamp() }).catch(()=>{});
+    set(reqRef,{ name:profile.name, avatar:profile.avatar, ageLayer:profile.ageLayer, region:profile.region, ts:serverTimestamp() }).catch(()=>{});
     onDisconnect(reqRef).remove();
     let cancelled=false;
     const unsub=onValue(reqRef,(s)=>{
@@ -810,12 +814,11 @@ async function boot(){
       members:{ [myUid]:true, [fromUid]:true },
       names:{ [myUid]:profile.name, [fromUid]:(fromP&&fromP.name)||"あいて" },
       profiles:{
-        [myUid]:{gender:profile.gender,ageLayer:profile.ageLayer,region:profile.region},
-        [fromUid]:fromP?{gender:fromP.gender,ageLayer:fromP.ageLayer,region:fromP.region}:{}
+        [myUid]:{avatar:profile.avatar,ageLayer:profile.ageLayer,region:profile.region},
+        [fromUid]:fromP?{avatar:fromP.avatar,ageLayer:fromP.ageLayer,region:fromP.region}:{}
       }
     }).catch(()=>{});
-    // 両者を掲示板上で busy に
-    await update(ref(db,`${dayPath}/board`),{ [`${myUid}/status`]:"busy", [`${fromUid}/status`]:"busy" }).catch(()=>{});
+    // 掲示板の busy 化は各自が入室時に自分の分だけ行う（ルール硬化で他人の掲示は書けないため）
     // 両者に部屋を割り当て
     await update(ref(db,`${dayPath}/users`),{ [`${myUid}/room`]:roomId, [`${fromUid}/room`]:roomId }).catch(()=>{});
     // 二人の間の申請を掃除
@@ -831,8 +834,8 @@ async function boot(){
     if(!uid) return;
     blocked.add(uid);
     // 両方向に記録（相手側からも自分が消える）
-    await set(ref(db,`${dayPath}/blocks/${myUid}/${uid}`),true).catch(()=>{});
-    await set(ref(db,`${dayPath}/blocks/${uid}/${myUid}`),true).catch(()=>{});
+    await set(ref(db,`blocklist/${myUid}/${uid}`),true).catch(()=>{});
+    await set(ref(db,`blocklist/${uid}/${myUid}`),true).catch(()=>{});
     renderBoard(); renderRequests();
   }
   async function submitReport(uid,name,prof,reason,note,roomId){
@@ -890,6 +893,7 @@ async function boot(){
     currentRoomId=roomId;
     clearAllOutgoing();
     teardownBoardListeners();   // 掲示板の購読は止める（自分の掲示は busy で残す）
+    update(ref(db,`${dayPath}/board/${myUid}`),{ status:"busy" }).catch(()=>{});
 
     const snap=await get(ref(db,`${dayPath}/rooms/${roomId}`));
     const room=snap.val();
@@ -908,8 +912,9 @@ async function boot(){
     $("composer").style.display="flex";
     $("msgInput").disabled=false; $("sendBtn").disabled=false;
     $("partnerName").textContent=partnerName;
+    $("partnerAvatar").innerHTML=avatarHTML(partnerProfile.avatar);
     // 相手の属性をステータス行に
-    const attrs=[partnerProfile.gender,partnerProfile.ageLayer,partnerProfile.region].filter(Boolean).join("・");
+    const attrs=[partnerProfile.ageLayer,partnerProfile.region].filter(Boolean).join("・");
     $("partnerStatusText").textContent=attrs?`${attrs}・接続済み`:"接続済み";
     $("partnerStatus").classList.remove("off");
     $("typing").classList.remove("show");
@@ -923,7 +928,7 @@ async function boot(){
     msgUnsub=onChildAdded(ref(db,`${dayPath}/rooms/${roomId}/messages`),(s)=>{ const m=s.val(); if(m) renderMessage(m); });
     presUnsub=onValue(ref(db,`${dayPath}/rooms/${roomId}/presence`),(s)=>{
       const v=s.val()||{}; const online=partnerUid&&v[partnerUid]===true;
-      if(online){ partnerSeen=true; clearTimeout(partnerTimer); if(!ended){ const a=[partnerProfile.gender,partnerProfile.ageLayer,partnerProfile.region].filter(Boolean).join("・"); $("partnerStatusText").textContent=a?`${a}・オンライン`:"オンライン"; $("partnerStatus").classList.remove("off"); } }
+      if(online){ partnerSeen=true; clearTimeout(partnerTimer); if(!ended){ const a=[partnerProfile.ageLayer,partnerProfile.region].filter(Boolean).join("・"); $("partnerStatusText").textContent=a?`${a}・オンライン`:"オンライン"; $("partnerStatus").classList.remove("off"); } }
       else if(partnerSeen&&!ended){ partnerLeft("相手が会話から退出しました"); }
     });
     typingUnsub=onValue(ref(db,`${dayPath}/rooms/${roomId}/typing/${partnerUid}`),(s)=>{
@@ -1050,4 +1055,3 @@ async function boot(){
 </script>
 </body>
 </html>
-
