@@ -1,1 +1,29 @@
+name: yoake-cleanup
 
+# 古い「夜のデータ」を毎日まとめて削除する（Admin SDK = 管理者権限なので、
+# ルールを閉じたままでも消せる）。Blaze プランも PC も不要。
+on:
+  schedule:
+    - cron: "0 20 * * *"   # 毎日 20:00 UTC（= 翌05:00 JST、日の出後）
+  workflow_dispatch: {}      # Actions画面から手動実行も可（テスト用）
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: リポジトリを取得
+        uses: actions/checkout@v4
+
+      - name: Node.js を準備
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: firebase-admin を入れる
+        run: npm install firebase-admin@12 --no-save
+
+      - name: 古いデータを削除
+        env:
+          FIREBASE_SA: ${{ secrets.FIREBASE_SA }}
+          DB_URL: "https://yoake-3c45d-default-rtdb.asia-southeast1.firebasedatabase.app"
+        run: node cleanup.js
